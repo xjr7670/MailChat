@@ -14,12 +14,16 @@ namespace MailChat
         SmtpClient smtpClient;
         ImapClient imapClient;
         Thread refreshThread;
+        AccountInfo config;
         CancellationTokenSource cts = new CancellationTokenSource();
+
         public mailchatForm()
         {
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
-            imapClient = Tools.GetImap();
+            config = Tools.GetConfig();
+            
+            imapClient = Tools.GetImap(config);
             refreshThread = new Thread(new ThreadStart(CheckNewEmail));
             refreshThread.IsBackground = true;
             refreshThread.Start();
@@ -64,8 +68,8 @@ namespace MailChat
                 return;
             }
 
-            smtpClient = Tools.GetSmtp();
-            bool result = Tools.SendMail(smtpClient, title, body);
+            smtpClient = Tools.GetSmtp(config);
+            bool result = Tools.SendMail(smtpClient, config, title, body);
             if (result)
             {
                 this.warnLbl.Text = "发送成功！";

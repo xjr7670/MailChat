@@ -2,6 +2,7 @@
 using MailKit.Net.Imap;
 using MailKit.Net.Smtp;
 using MimeKit;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +11,7 @@ namespace MailChat
 {
     class Tools:mailchatForm
     {
-        public static bool SendMail(SmtpClient smtpClient, string title, string body)
+        public static bool SendMail(SmtpClient smtpClient, AccountInfo account, string title, string body)
         {
             MimeMessage message = new MimeMessage();
             message.Subject = title;
@@ -18,7 +19,7 @@ namespace MailChat
                 Text = body
             };
 
-            Dictionary<String, String> userInfo = GetUserInfo();
+            Dictionary<String, String> userInfo = GetUserInfo(account);
             string fromAddr = userInfo["fromAddr"];
             string fromName = userInfo["fromName"];
             string toAddr = userInfo["toAddr"];
@@ -52,12 +53,11 @@ namespace MailChat
         }
 
 
-        public static ImapClient GetImap()
+        public static ImapClient GetImap(AccountInfo info)
         {
-            Dictionary<String, String> imapInfo = GetImapInfo();
-            string imapHost = imapInfo["imapHost"];
-            string imapUser = imapInfo["imapUser"];
-            string imapPass = imapInfo["imapPass"];
+            string imapHost = info.imapInfo.ImapHost;
+            string imapUser = info.imapInfo.ImapUser;
+            string imapPass = info.imapInfo.ImapPass;
 
             ImapClient client = new ImapClient();
             client.Connect(imapHost);
@@ -72,23 +72,13 @@ namespace MailChat
             return client;
         }
 
-        public static Dictionary<String, String> GetImapInfo()
-        {
-            Dictionary<String, String> imapInfo = new Dictionary<string, string>();
-            imapInfo.Add("imapHost", "imap.126.com");
-            imapInfo.Add("imapUser", "xjr30226@126.com");
-            imapInfo.Add("imapPass", "");
-
-            return imapInfo;
-        }
-
-        public static SmtpClient GetSmtp()
+        public static SmtpClient GetSmtp(AccountInfo info)
         {
             SmtpClient client = new SmtpClient();
-            Dictionary<String, String> userInfo = GetUserInfo();
-            string smtpHost = userInfo["smtpHost"];
-            string smtpUser = userInfo["smtpUser"];
-            string smtpPass = userInfo["smtpPass"];
+
+            string smtpHost = info.smtpInfo.SmtpHost;
+            string smtpUser = info.smtpInfo.SmtpUser;
+            string smtpPass = info.smtpInfo.SmtpPass;
 
             client.Connect(smtpHost);
             client.Authenticate(smtpUser, smtpPass);
@@ -97,17 +87,15 @@ namespace MailChat
             return client;
         }
 
-        public static Dictionary<String, String> GetUserInfo()
+        public static Dictionary<String, String> GetUserInfo(AccountInfo info)
         {
             Dictionary<String, String> userInfo = new Dictionary<string, string>();
 
-            userInfo.Add("fromAddr", "xjr30226@126.com");
-            userInfo.Add("fromName", "CavinX");
-            userInfo.Add("toAddr", "284182470@qq.com");
-            userInfo.Add("toName", "XQQ");
-            userInfo.Add("smtpHost", "smtp.126.com");
-            userInfo.Add("smtpUser", "xjr30226@126.com");
-            userInfo.Add("smtpPass", "");
+            userInfo.Add("fromAddr", info.account.Sender.Address);
+            userInfo.Add("fromName", info.account.Sender.Name);
+            userInfo.Add("toAddr", info.account.Receiver.Address);
+            userInfo.Add("toName", info.account.Receiver.Name);
+
             return userInfo;
         }
 
@@ -119,6 +107,17 @@ namespace MailChat
             sw.WriteLine(log);
             sw.Close();
             fs.Close();
+        }
+        
+        public static AccountInfo GetConfig()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string confileFileName = "config.json";
+            string fullPath = Path.Combine(baseDir, confileFileName);
+            string json = File.ReadAllText(fullPath);
+            AccountInfo config = JsonConvert.DeserializeObject<AccountInfo>(json);
+
+            return config;
         }
     }
 }
